@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="theme-color" content="#2a2991">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>My Studio</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
@@ -278,10 +282,8 @@ function renderMain(d){
   if(S.main==="backup"){
     $("bkt").value=json;$("bkt").onfocus=function(){this.select()};
     $("bk").onclick=function(){var m=$("bkm");
-      if(!(window.claude&&claude.use)){m.textContent="Saving files isn’t available here. Copy the backup text instead.";return}
-      claude.use("downloads").then(function(dl){if(!dl){m.textContent="Saving files isn’t available here. Copy the backup text instead.";return}
-        return dl.save({filename:"my-studio-backup-"+ymd(Date.now())+".json",data:json}).then(function(){m.textContent="Backup saved."})
-      }).catch(function(e){m.textContent=e&&e.code==="declined"?"Save cancelled.":"Couldn’t save the file. Copy the backup text instead."})};
+      try{var u=URL.createObjectURL(new Blob([json],{type:"application/json"})),l=document.createElement("a");l.href=u;l.download="my-studio-backup-"+ymd(Date.now())+".json";document.body.appendChild(l);l.click();l.remove();setTimeout(function(){URL.revokeObjectURL(u)},2000);m.textContent="Backup saved to your Downloads."}
+      catch(e){m.textContent="Couldn’t save the file. Copy the backup text instead."}};
     $("bkf").onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){$("rst").value=r.result};r.readAsText(f)};
     $("rs").onclick=function(){var m=$("bkm"),o;try{o=JSON.parse($("rst").value)}catch(e){}
       if(!o||!Array.isArray(o.projects)){m.textContent="That doesn’t look like a My Studio backup.";return}
@@ -420,6 +422,7 @@ function render(open){
 }
 render();
 if(cur()&&window.matchMedia("(max-width:760px)").matches)$("app").classList.add("open");
+if("serviceWorker"in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
 </script>
 </body>
 </html>
