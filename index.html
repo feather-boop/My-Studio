@@ -281,9 +281,11 @@ function renderMain(d){
   [].forEach.call(d.querySelectorAll("[data-go]"),function(b){b.onclick=function(){var p=S.projects.find(function(x){return x.id===b.dataset.go});S.sel=p.id;S.shelf=p.shelf;S.main="project";save();render(true)}});
   if(S.main==="backup"){
     $("bkt").value=json;$("bkt").onfocus=function(){this.select()};
-    $("bk").onclick=function(){var m=$("bkm");
-      try{var u=URL.createObjectURL(new Blob([json],{type:"application/json"})),l=document.createElement("a");l.href=u;l.download="my-studio-backup-"+ymd(Date.now())+".json";document.body.appendChild(l);l.click();l.remove();setTimeout(function(){URL.revokeObjectURL(u)},2000);m.textContent="Backup saved to your Downloads."}
-      catch(e){m.textContent="Couldn’t save the file. Copy the backup text instead."}};
+    $("bk").onclick=async function(){var m=$("bkm"),f=new File([json],"my-studio-backup-"+ymd(Date.now())+".json",{type:"application/json"});
+      try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:"My Studio backup"});m.textContent="Backup shared.";return}}
+      catch(e){if(e&&e.name==="AbortError")return}
+      try{var u=URL.createObjectURL(f),l=document.createElement("a");l.href=u;l.download=f.name;document.body.appendChild(l);l.click();l.remove();m.textContent="If no file arrived, copy the backup text below instead."}
+      catch(e){m.textContent="Couldn’t save the file. Copy the backup text below instead."}};
     $("bkf").onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){$("rst").value=r.result};r.readAsText(f)};
     $("rs").onclick=function(){var m=$("bkm"),o;try{o=JSON.parse($("rst").value)}catch(e){}
       if(!o||!Array.isArray(o.projects)){m.textContent="That doesn’t look like a My Studio backup.";return}
@@ -422,7 +424,6 @@ function render(open){
 }
 render();
 if(cur()&&window.matchMedia("(max-width:760px)").matches)$("app").classList.add("open");
-if("serviceWorker"in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
 </script>
 </body>
 </html>
