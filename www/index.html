@@ -20,7 +20,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 "Bricolage Gr
 button,input,textarea{font:inherit;color:inherit}
 button{cursor:pointer;border:0;background:none}
 :focus-visible{outline:3px solid var(--acc);outline-offset:2px}
-.app{display:grid;grid-template-columns:minmax(300px,380px) 1fr;height:100vh;height:100dvh}
+.app{display:grid;grid-template-columns:380px 1fr;transition:grid-template-columns .3s ease;height:100vh;height:100dvh}
 .list{border-right:1px solid var(--line);background:var(--panel);overflow-y:auto;padding:20px 16px}
 .detail{overflow-y:auto;padding:28px clamp(18px,4vw,48px)}
 h1{font-size:28px;font-weight:800;margin:0 0 4px;letter-spacing:-.02em}
@@ -30,7 +30,7 @@ h1{font-size:28px;font-weight:800;margin:0 0 4px;letter-spacing:-.02em}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn{color:#12151d}}
 .btn.ghost{background:var(--accsoft);color:var(--acc)}
 .btn.full{width:100%}
-.card{display:block;width:100%;text-align:left;padding:14px;margin-top:10px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.card{display:block;width:100%;text-align:start;padding:14px;margin-top:10px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
 .card.on{border-color:var(--acc);background:var(--accsoft)}
 .card b{font-size:18px;font-weight:600}
 .meta{color:var(--mute);font-size:14px;display:flex;justify-content:space-between;gap:8px;margin-top:2px}
@@ -100,25 +100,48 @@ h2{font-size:20px;font-weight:600;margin:28px 0 8px}
 .dates label{display:flex;align-items:center;gap:8px;color:var(--mute)}
 input[type=date]{min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:0 10px}
 .over{color:var(--warn)}.tag.over{background:none;font-weight:600}
-.it{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;width:100%;text-align:left;min-height:52px;padding:10px 14px;margin-top:8px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.it{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;width:100%;text-align:start;min-height:52px;padding:10px 14px;margin-top:8px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
 .it small{color:var(--mute);margin-left:auto}
 .notes{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}
 .notes summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}
 .ntext{white-space:pre-wrap;user-select:text;-webkit-user-select:text;margin:4px 0 10px;overflow-wrap:anywhere}
 .ntext a{color:var(--acc)}
 .stb.waiting{background:var(--accsoft);border-color:var(--acc);color:var(--acc)}
+.list{width:380px;transition:transform .3s ease,visibility 0s}
+.app.collapsed{grid-template-columns:0px 1fr}
+.app.collapsed .list{transform:translateX(-100%);visibility:hidden;transition:transform .3s ease,visibility 0s .3s}
+.app.collapsed .detail{padding-left:48px}
+.detail{transition:padding .3s ease}
+.tab{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:380px;z-index:20;width:26px;height:56px;border-radius:0 12px 12px 0;background:var(--panel);border:1px solid var(--line);border-left:0;color:var(--mute);font-size:22px;line-height:1;transition:left .3s ease}
+.app.collapsed~.tab{left:0}
+.hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+.hdr h1{margin:0}
+.fil{margin-top:10px;border:1px solid var(--line);border-radius:12px;padding:0 12px}
+.fil summary{min-height:44px;display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600}
+.fil .filters{margin:0 0 10px}
+.card b{display:block}
+.card.leaving{pointer-events:none}
+.head{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.head .title{flex:1 1 260px;min-width:0;width:auto}
+.head .dates{flex:0 0 auto;margin:0;flex-direction:column;align-items:stretch;gap:6px}
+.head .dates label{justify-content:space-between}
+.rolerow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 6px}
+.rolerow .sel{flex:0 0 auto;min-width:190px}
+.rolerow .field{flex:1 1 220px;min-width:200px}
+@media (max-width:760px){.tab{display:none}.list{width:auto}}
 </style>
 </head>
 <body>
 <div class="app" id="app">
-  <aside class="list" id="list"></aside>
+  <aside class="list" id="list"><div id="ctl"></div><div id="results"></div><div id="emsg"></div></aside>
   <main class="detail" id="detail"></main>
 </div>
+<button class="tab" id="menuTab" aria-label="Hide menu" aria-expanded="true">‹</button>
 <script>
 var STAGES=["Idea","Sketching","Making","Refining","Finished"];
 var ROLES={solo:"Solo",collab:"Collaboration",help:"Support role"};
 var KEY="studio-progress-v1";
-var S={projects:[],sel:null,adding:false,confirm:false,confirmPart:null,q:"",role:"all",stage:"all",medium:"all",person:"all",draft:{},shelf:"active",main:"project",editNotes:null,openNotes:{},tpl:{Song:["Write lyrics","Record demo","Record final takes","Mix","Master"],Video:["Storyboard","Shoot","Edit","Color grade","Export"],Artwork:["Sketch","Block in color","Refine details","Final touches"],Writing:["Outline","First draft","Revise","Proofread"]}};
+var S={projects:[],sel:null,adding:false,confirm:false,confirmPart:null,q:"",role:"all",stage:"all",medium:"all",person:"all",draft:{},rt:0,filtersOpen:false,collapsed:false,shelf:"active",main:"project",editNotes:null,openNotes:{},tpl:{Song:["Write lyrics","Record demo","Record final takes","Mix","Master"],Video:["Storyboard","Shoot","Edit","Color grade","Export"],Artwork:["Sketch","Block in color","Refine details","Final touches"],Writing:["Outline","First draft","Revise","Proofread"]}};
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function splitNames(s){var o=[];String(s||"").split(",").forEach(function(n){n=n.trim();if(n&&!o.some(function(x){return x.toLowerCase()===n.toLowerCase()}))o.push(n)});return o}
 try{var raw=localStorage.getItem(KEY);if(raw){var pp=JSON.parse(raw);if(pp&&pp.projects)S.projects=pp.projects;if(pp&&pp.tpl)S.tpl=pp.tpl;S.sel=pp&&pp.sel||null}}catch(e){}
@@ -142,11 +165,16 @@ function dueDiff(v){return Math.round((fromYmd(v)-fromYmd(ymd(Date.now())))/864e
 function dueLabel(v){var d=dueDiff(v);return d<0?"Overdue by "+(-d)+(d===-1?" day":" days"):d===0?"Due today":d===1?"Due tomorrow":"Due "+fmt(fromYmd(v))}
 function activeDays(p){var o={};p.log.forEach(function(e){o[ymd(e.d)]=1});return Object.keys(o).length}
 function linkify(t){return esc(t).replace(/https?:\/\/[^\s<]+/g,function(u){return '<a href="'+u+'" target="_blank" rel="noopener noreferrer">'+u+'</a>'})}
+function isRtl(s){var m=String(s||"").match(/[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF\u0590-\u08FF]/);return !!m&&m[0]>="\u0590"&&m[0]<="\u08FF"}
+function applyDir(root){root.querySelectorAll('input:not([type=date]):not([type=checkbox]):not([type=file]),textarea,.mt,.entry p,.ntext,.tt,.card b,.it span').forEach(function(el){el.setAttribute("dir","auto")})}
 function datesHtml(p){
+  return '<div class="dates" dir="ltr"><label>Started <input type="date" id="cr" value="'+ymd(p.created)+'"></label><label>Due <input type="date" id="due" value="'+esc(p.due)+'"></label></div>';
+}
+function daysLine(p){
   var n=dayN(p.created,p.ended||Date.now()),w=activeDays(p);
-  var h='<div class="dates"><label>Started <input type="date" id="cr" value="'+ymd(p.created)+'"></label><label>Due <input type="date" id="due" value="'+esc(p.due)+'"></label>';
-  if(p.due&&p.shelf==="active")h+='<span class="'+(dueDiff(p.due)<0?'over':'')+'">'+dueLabel(p.due)+'</span>';
-  return h+'</div><div class="sub" style="margin:8px 0 0">'+(p.ended?'Ran for ':'')+n+(n===1?' day':' days')+(p.ended?'':' in')+' · actively worked on '+w+(w===1?' day':' days')+'</div>';
+  var h='<div class="sub" style="margin:6px 0 14px">'+(p.ended?'Ran for ':'')+n+(n===1?' day':' days')+(p.ended?'':' in')+' · actively worked on '+w+(w===1?' day':' days');
+  if(p.due&&p.shelf==="active")h+=' · <span class="'+(dueDiff(p.due)<0?'over':'')+'">'+dueLabel(p.due)+'</span>';
+  return h+'</div>';
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify({projects:S.projects,sel:S.sel,tpl:S.tpl}))}catch(e){}}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
@@ -166,20 +194,21 @@ function whoSel(p,val,attr,none){
   return h+'</select>';
 }
 
-function renderControls(){
+function renderControls(anim){
   if(S.stage!=="all"&&STAGES.indexOf(S.stage)<0)S.stage="all";
   if(S.medium!=="all"&&mediums().indexOf(S.medium)<0)S.medium="all";
   if(S.person!=="all"&&everyone().indexOf(S.person)<0)S.person="all";
-  var h='<h1>My Studio</h1><p class="sub" id="count"></p><div class="filters" style="margin:0 0 12px">'+[["today","Today"],["upcoming","Upcoming"],["backup","Backup"]].map(function(s){return '<button class="chip'+(S.main===s[0]?' on':'')+'" data-main="'+s[0]+'" aria-pressed="'+(S.main===s[0])+'">'+s[1]+'</button>'}).join("")+'</div><button class="btn full" id="addBtn">New project</button>';
+  var h='<div class="hdr"><h1>My Studio</h1><button class="btn" id="addBtn">New project</button></div><p class="sub" id="count"></p><div class="filters" style="margin:0 0 12px">'+[["today","Today"],["upcoming","Upcoming"],["backup","Backup"]].map(function(s){return '<button class="chip'+(S.main===s[0]?' on':'')+'" data-main="'+s[0]+'" aria-pressed="'+(S.main===s[0])+'">'+s[1]+'</button>'}).join("")+'</div>';
   if(S.adding){
     h+='<div class="newbox"><input class="field" id="nt" placeholder="Project title" maxlength="80"><select class="sel" id="nr" aria-label="Project type">'+Object.keys(ROLES).map(function(k){return '<option value="'+k+'">'+ROLES[k]+'</option>'}).join("")+'</select><input class="field hide" id="np" placeholder="Names, separated by commas" maxlength="160"><input class="field" id="nm" placeholder="First medium (song, video, painting…)" maxlength="60"><button class="btn" id="nsave">Create project</button></div>';
   }
-  h+='<div class="filters" style="margin-top:14px">'+[["active","Active"],["dead","Dead Zone"],["done","Proudly Done"]].map(function(s){return '<button class="chip'+(S.shelf===s[0]?' on':'')+'" data-shelf="'+s[0]+'" aria-pressed="'+(S.shelf===s[0])+'">'+s[1]+' ('+S.projects.filter(function(p){return p.shelf===s[0]}).length+')</button>'}).join("")+'</div>';
+  h+='<div class="filters" style="margin-top:6px">'+[["active","Active"],["dead","Dead Zone"],["done","Proudly Done"]].map(function(s){return '<button class="chip'+(S.shelf===s[0]?' on':'')+'" data-shelf="'+s[0]+'" aria-pressed="'+(S.shelf===s[0])+'">'+s[1]+' ('+S.projects.filter(function(p){return p.shelf===s[0]}).length+')</button>'}).join("")+'</div>';
   h+='<input class="field srch" id="q" type="search" placeholder="Search titles, people, notes" value="'+esc(S.q)+'" aria-label="Search projects">';
-  h+='<div class="filters">';
+  var nf=(S.role!=="all")+(S.stage!=="all")+(S.medium!=="all")+(S.person!=="all");
+  h+='<details class="fil" id="fd"'+(S.filtersOpen?' open':'')+'><summary>Filters'+(nf?' <span class="tag">'+nf+' on</span>':'')+'</summary><div class="filters">';
   [["all","All"],["solo","Solo"],["collab","Collab"],["help","Support"]].forEach(function(r){h+='<button class="chip'+(S.role===r[0]?' on':'')+'" data-role="'+r[0]+'" aria-pressed="'+(S.role===r[0])+'">'+r[1]+'</button>'});
-  h+='</div><div class="filters"><select class="sel" id="fs" aria-label="Filter by stage">'+opts(STAGES,S.stage,"Any stage")+'</select><select class="sel" id="fm" aria-label="Filter by medium">'+opts(mediums(),S.medium,"Any medium")+'</select><select class="sel" id="fp" aria-label="Filter by person">'+opts(everyone(),S.person,"Anyone")+'</select></div><div id="results"></div>';
-  $("list").innerHTML=h;
+  h+='</div><div class="filters"><select class="sel" id="fs" aria-label="Filter by stage">'+opts(STAGES,S.stage,"Any stage")+'</select><select class="sel" id="fm" aria-label="Filter by medium">'+opts(mediums(),S.medium,"Any medium")+'</select><select class="sel" id="fp" aria-label="Filter by person">'+opts(everyone(),S.person,"Anyone")+'</select></div></details>';
+  $("ctl").innerHTML=h;
   $("addBtn").onclick=function(){S.adding=!S.adding;renderControls();var n=$("nt");if(n)n.focus()};
   if(S.adding){
     $("nr").onchange=function(){var np=$("np");np.classList.toggle("hide",this.value==="solo");np.placeholder=this.value==="help"?"Whose project is it?":"Collaborators, separated by commas"};
@@ -189,14 +218,15 @@ function renderControls(){
       var p={id:uid(),title:t,role:r,people:r==="solo"?[]:splitNames($("np").value),next:"",tasks:[],shelf:"active",created:Date.now(),due:"",parts:[{id:uid(),medium:$("nm").value.trim(),stage:"Idea",owner:"",milestones:[]}],log:[],updated:Date.now()};
       S.projects.push(p);S.sel=p.id;S.shelf="active";S.main="project";S.adding=false;S.confirm=false;save();render(true)};
   }
-  $("q").oninput=function(){S.q=this.value;renderResults()};
+  $("q").oninput=function(){S.q=this.value;renderResults(false)};
+  $("fd").ontoggle=function(){S.filtersOpen=this.open};
   [].forEach.call(document.querySelectorAll("[data-main]"),function(b){b.onclick=function(){S.main=S.main===b.dataset.main?"project":b.dataset.main;$("app").classList.add("open");render()}});
-  [].forEach.call(document.querySelectorAll("[data-shelf]"),function(b){b.onclick=function(){S.shelf=b.dataset.shelf;renderControls()}});
-  [].forEach.call(document.querySelectorAll("[data-role]"),function(b){b.onclick=function(){S.role=b.dataset.role;renderControls()}});
-  $("fs").onchange=function(){S.stage=this.value;renderResults()};
-  $("fm").onchange=function(){S.medium=this.value;renderResults()};
-  $("fp").onchange=function(){S.person=this.value;renderResults()};
-  renderResults();
+  [].forEach.call(document.querySelectorAll("[data-shelf]"),function(b){b.onclick=function(){S.shelf=b.dataset.shelf;renderControls(true)}});
+  [].forEach.call(document.querySelectorAll("[data-role]"),function(b){b.onclick=function(){S.role=b.dataset.role;renderControls(true)}});
+  $("fs").onchange=function(){S.stage=this.value;renderResults(true)};
+  $("fm").onchange=function(){S.medium=this.value;renderResults(true)};
+  $("fp").onchange=function(){S.person=this.value;renderResults(true)};
+  renderResults(anim);
 }
 function matches(p){
   if(p.shelf!==S.shelf)return false;
@@ -208,26 +238,45 @@ function matches(p){
   var hay=[p.title,team(p).join(" "),p.next,(p.tasks||[]).map(function(k){return k.t}).join(" "),ROLES[p.role]].concat(p.parts.map(function(x){return x.medium+" "+(x.notes||"")}),p.parts.reduce(function(a,x){return a.concat(x.milestones.map(function(m){return m.t}))},[]),p.log.map(function(e){return e.t})).join(" ").toLowerCase();
   return q.split(/\s+/).every(function(w){return hay.indexOf(w)>-1});
 }
-function renderResults(){
-  var list=S.projects.filter(matches).sort(function(a,b){return b.updated-a.updated});
+function cardInner(p){
+  var t=team(p),busy={};
+  allMs(p).forEach(function(m){if(m.st==="doing"&&m.who)busy[m.who]=1});
+  var bl=Object.keys(busy);
+  var h='<b>'+esc(p.title||"Untitled")+'</b>';
+  if(p.role!=="solo")h+='<div><span class="tag">'+ROLES[p.role]+'</span>'+t.map(function(n){return '<span class="cb">'+esc(n)+'</span>'}).join("")+'</div>';
+  h+='<div class="meta"><span>'+p.parts.map(function(x){return esc(x.medium||"Untitled part")+": "+x.stage}).join(" · ")+'</span></div>';
+  if(bl.length)h+='<div class="meta"><span>In progress: '+bl.map(esc).join(", ")+'</span></div>';
+  if(p.due&&p.shelf==="active")h+='<div class="meta"><span class="'+(dueDiff(p.due)<0?'over':'')+'">'+dueLabel(p.due)+'</span></div>';
+  return h+'<div class="bar"><i style="width:'+pct(p)+'%"></i></div>';
+}
+function renderResults(anim){
+  var list=S.projects.filter(matches).sort(function(a,b){return (b.updated-a.updated)||(b.created-a.created)});
   var tot=S.projects.filter(function(p){return p.shelf===S.shelf}).length;
   $("count").textContent=list.length===tot?tot+(tot===1?" project":" projects"):list.length+" of "+tot+" shown";
-  var h="";
-  if(!tot)h='<p class="empty">'+{active:"Nothing here yet. Add your first project to start logging progress.",dead:"The Dead Zone is empty. Projects you started but never finished can rest here.",done:"Nothing in Proudly Done yet. Finished projects will be archived here."}[S.shelf]+'</p>';
-  else if(!list.length)h='<p class="empty">No projects match. Clear the search or filters to see everything.</p>';
-  list.forEach(function(p){
-    var t=team(p),busy={};
-    allMs(p).forEach(function(m){if(m.st==="doing"&&m.who)busy[m.who]=1});
-    var bl=Object.keys(busy);
-    h+='<button class="card'+(p.id===S.sel?' on':'')+'" data-open="'+p.id+'"><b>'+esc(p.title||"Untitled")+'</b>';
-    if(p.role!=="solo")h+='<div><span class="tag">'+ROLES[p.role]+'</span>'+t.map(function(n){return '<span class="cb">'+esc(n)+'</span>'}).join("")+'</div>';
-    h+='<div class="meta"><span>'+p.parts.map(function(x){return esc(x.medium||"Untitled part")+": "+x.stage}).join(" · ")+'</span></div>';
-    if(bl.length)h+='<div class="meta"><span>In progress: '+bl.map(esc).join(", ")+'</span></div>';
-    if(p.due&&p.shelf==="active")h+='<div class="meta"><span class="'+(dueDiff(p.due)<0?'over':'')+'">'+dueLabel(p.due)+'</span></div>';
-    h+='<div class="bar"><i style="width:'+pct(p)+'%"></i></div></button>';
-  });
-  $("results").innerHTML=h;
-  [].forEach.call(document.querySelectorAll("[data-open]"),function(b){b.onclick=function(){S.sel=b.dataset.open;S.main="project";S.confirm=false;S.confirmPart=null;save();render(true)}});
+  $("emsg").innerHTML=!tot?'<p class="empty">'+{active:"Nothing here yet. Add your first project to start logging progress.",dead:"The Dead Zone is empty. Projects you started but never finished can rest here.",done:"Nothing in Proudly Done yet. Finished projects will be archived here."}[S.shelf]+'</p>':!list.length?'<p class="empty">No projects match. Clear the search or filters to see everything.</p>':'';
+  var box=$("results"),tk=++S.rt,els={},ids={};
+  [].forEach.call(box.children,function(e){els[e.dataset.id]=e});
+  list.forEach(function(p){ids[p.id]=1});
+  var dur=anim&&!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)&&box.animate!==undefined;
+  var gone=Object.keys(els).filter(function(id){return !ids[id]});
+  gone.forEach(function(id){var e=els[id];if(e.classList.contains("leaving"))return;e.classList.add("leaving");if(dur)e.animate([{opacity:1},{opacity:0}],{duration:180,fill:"forwards"})});
+  setTimeout(function(){
+    if(tk!==S.rt)return;
+    var first={};
+    [].forEach.call(box.children,function(e){first[e.dataset.id]=e.getBoundingClientRect().top});
+    gone.forEach(function(id){els[id].remove();delete els[id]});
+    list.forEach(function(p){
+      var e=els[p.id];
+      if(!e){e=document.createElement("button");e.dataset.id=p.id;e.dataset.fresh="1";els[p.id]=e}
+      e.className="card"+(p.id===S.sel?" on":"");e.dataset.open=p.id;e.innerHTML=cardInner(p);applyDir(e);
+      box.appendChild(e);
+    });
+    list.forEach(function(p){
+      var e=els[p.id];
+      if(e.dataset.fresh){delete e.dataset.fresh;if(dur)e.animate([{opacity:0},{opacity:1}],{duration:240,delay:140,fill:"backwards"})}
+      else if(dur){var dy=first[p.id]-e.getBoundingClientRect().top;if(dy)e.animate([{transform:"translateY("+dy+"px)"},{transform:"none"}],{duration:280,easing:"ease"})}
+    });
+  },dur&&gone.length?190:0);
 }
 
 function boardHtml(p){
@@ -300,13 +349,15 @@ function renderDetail(){
   if(!p){d.innerHTML='<p class="empty">Pick a project on the left, or create a new one.</p>';return}
   var T=p.role!=="solo";
   var h='<button class="btn ghost back" id="back">All projects</button>';
-  h+='<input class="title" id="ttl" value="'+esc(p.title)+'" aria-label="Project title" maxlength="80">';
-  h+='<div class="filters" style="margin:0 0 6px"><select class="sel" id="role" style="flex:0 1 220px" aria-label="Project type">'+Object.keys(ROLES).map(function(k){return '<option value="'+k+'"'+(k===p.role?' selected':'')+'>'+ROLES[k]+'</option>'}).join("")+'</select></div>';
+  var rtl=isRtl(p.title);
+  h+='<div class="head" dir="'+(rtl?'rtl':'ltr')+'"><input class="title" id="ttl" value="'+esc(p.title)+'" aria-label="Project title" maxlength="80">'+datesHtml(p)+'</div>';
+  h+=daysLine(p);
+  h+='<div class="rolerow"><select class="sel" id="role" aria-label="Project type">'+Object.keys(ROLES).map(function(k){return '<option value="'+k+'"'+(k===p.role?' selected':'')+'>'+ROLES[k]+'</option>'}).join("")+'</select>';
   if(T){
-    h+='<div class="lbl">'+(p.role==="help"?"Whose project is it?":"Collaborators")+'</div><div class="bubs">'+p.people.map(function(n){return '<span class="bub">'+esc(n)+'<button data-rmper="'+esc(n)+'" aria-label="Remove '+esc(n)+'">×</button></span>'}).join("")+'</div>';
+    p.people.forEach(function(n){h+='<span class="bub">'+esc(n)+'<button data-rmper="'+esc(n)+'" aria-label="Remove '+esc(n)+'">×</button></span>'});
     h+='<input class="field" id="ppl" placeholder="'+roleHint(p.role)+'" maxlength="160" aria-label="Add people">';
   }
-  h+=datesHtml(p);
+  h+='</div>';
   h+='<div class="pct" style="margin-top:18px">'+pct(p)+'%</div><div class="sub">of all milestones done</div><div class="bar"><i style="width:'+pct(p)+'%"></i></div>';
   p.tasks=p.tasks||[];
   var dr=S.draft[p.id]||{t:"",w:""};
@@ -330,7 +381,6 @@ function renderDetail(){
       h+='<button class="x" data-del="'+m.id+'" data-p="'+x.id+'" aria-label="Remove milestone">×</button></div>';
     });
     h+='<div class="add"><input class="field" data-mnew="'+x.id+'" placeholder="Add a milestone" maxlength="100"><button class="btn" data-madd="'+x.id+'">Add</button></div>';
-    h+='<div class="add"><select class="sel" data-tsel="'+x.id+'" aria-label="Add steps from a template"><option value="">Add steps from a template…</option>'+Object.keys(S.tpl).map(function(k){return '<option>'+esc(k)+'</option>'}).join("")+'</select><button class="btn ghost sm" data-tsave="'+x.id+'">Save steps as template</button></div>';
     h+='<details class="notes" data-nd="'+x.id+'"'+(S.openNotes[x.id]?' open':'')+'><summary>Links and notes</summary>';
     if(S.editNotes===x.id)h+='<textarea class="field" id="ntx" rows="5">'+esc(x.notes)+'</textarea><div class="add"><button class="btn" data-nsave="'+x.id+'">Save notes</button><button class="btn ghost" data-ncancel="1">Cancel</button></div>';
     else h+='<div class="ntext">'+(x.notes?linkify(x.notes):'<span class="empty">Nothing yet. Add reference links, folders or lyrics.</span>')+'</div><button class="btn ghost sm" data-nedit="'+x.id+'">Edit</button>';
@@ -359,7 +409,7 @@ function renderDetail(){
   $("back").onclick=function(){$("app").classList.remove("open")};
   $("cr").onchange=function(){if(this.value){p.created=fromYmd(this.value);touch();renderDetail()}};
   $("due").onchange=function(){p.due=this.value;touch();renderDetail();renderResults()};
-  $("ttl").onchange=function(){p.title=this.value.trim()||"Untitled";touch();renderResults()};
+  $("ttl").onchange=function(){p.title=this.value.trim()||"Untitled";touch();renderResults(false);renderDetail()};
   $("role").onchange=function(){p.role=this.value;if(p.role!=="solo"&&p.next){p.tasks.push({id:uid(),t:p.next,who:"Me"});p.next=""}touch();render()};
   if(T){
     var add=function(str){
@@ -422,7 +472,12 @@ function render(open){
   renderControls();renderDetail();
   if(open&&cur())$("app").classList.add("open");
 }
-render();
+function applyMenu(){$("app").classList.toggle("collapsed",!!S.collapsed);var t=$("menuTab");t.textContent=S.collapsed?"›":"‹";t.setAttribute("aria-label",S.collapsed?"Show menu":"Hide menu");t.setAttribute("aria-expanded",String(!S.collapsed))}
+try{S.collapsed=localStorage.getItem("my-studio-ui")==="1"}catch(e){}
+$("menuTab").onclick=function(){S.collapsed=!S.collapsed;try{localStorage.setItem("my-studio-ui",S.collapsed?"1":"")}catch(e){}applyMenu()};
+$("results").onclick=function(e){var b=e.target.closest("[data-open]");if(!b)return;S.sel=b.dataset.open;S.main="project";S.confirm=false;S.confirmPart=null;save();render(true)};
+var mo=new MutationObserver(function(){applyDir($("ctl"));applyDir($("detail"))});mo.observe($("ctl"),{childList:true});mo.observe($("detail"),{childList:true});
+applyMenu();render();
 if(cur()&&window.matchMedia("(max-width:760px)").matches)$("app").classList.add("open");
 </script>
 </body>
