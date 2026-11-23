@@ -56,7 +56,6 @@ h2{font-size:20px;font-weight:600;margin:28px 0 8px}
 .danger{color:var(--warn);margin-top:36px;min-height:48px}
 .back{display:none;margin-bottom:10px}
 .top{display:flex;justify-content:space-between;align-items:center}
-@media (max-width:760px){.app{grid-template-columns:1fr}.detail{display:none}.app.open .list{display:none}.app.open .detail{display:block}.back{display:inline-block}}
 .srch{margin-top:14px}
 .filters{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .filters .chip{min-height:40px;padding:0 12px;font-size:14px}
@@ -124,7 +123,7 @@ input[type=date]{min-height:44px;border-radius:12px;border:1px solid var(--line)
 .rolerow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 6px}
 .rolerow .sel{flex:0 0 auto;min-width:190px}
 .rolerow .field{flex:1 1 220px;min-width:200px}
-@media (max-width:760px){.tab{display:none}.list{width:auto}}
+
 html{-webkit-tap-highlight-color:transparent}
 summary{-webkit-user-select:none;user-select:none;touch-action:manipulation}
 summary:focus,summary:focus-visible{outline:none}
@@ -136,6 +135,22 @@ summary:focus,summary:focus-visible{outline:none}
 .btn.sh{flex:1;min-height:44px;padding:0 8px}
 .btn.ghost.on{background:var(--acc);color:var(--on)}
 .fil .shelves{margin:0 0 10px}
+.scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:14}
+.add .btn{white-space:nowrap;flex:0 0 auto}
+.btn.danger{background:#f6dcd6;color:#a23a28;font-weight:600}
+@media (prefers-color-scheme:dark){.btn.danger{background:#47241f;color:#ff9a86}}
+.btn.danger{background:color-mix(in srgb,var(--warn) 16%,var(--panel));color:var(--warn)}
+.btn.danger.sure{background:var(--warn);color:var(--on)}
+@media (max-width:900px),(orientation:portrait){
+.app,.app.collapsed{grid-template-columns:1fr}
+.list{position:fixed;top:0;left:0;bottom:0;width:min(380px,88vw);z-index:15;box-shadow:0 0 28px rgba(0,0,0,.28);padding-top:calc(env(safe-area-inset-top,0px) + 20px)}
+.app.collapsed .list{box-shadow:none}
+.detail,.app.collapsed .detail{padding-left:36px}
+.tab{left:min(380px,88vw)}
+.app.collapsed~.tab{left:0}
+.app:not(.collapsed)~.scrim{display:block}
+.back{display:none!important}
+}
 </style>
 </head>
 <body>
@@ -143,6 +158,7 @@ summary:focus,summary:focus-visible{outline:none}
   <aside class="list" id="list"><div id="ctl"></div><div id="results"></div><div id="emsg"></div></aside>
   <main class="detail" id="detail"></main>
 </div>
+<div class="scrim" id="scrim"></div>
 <button class="tab" id="menuTab" aria-label="Hide menu" aria-expanded="true">‹</button>
 <script>
 var STAGES=["Idea","Sketching","Making","Refining","Finished"];
@@ -219,18 +235,18 @@ function renderControls(anim){
   h+='</div><div class="filters"><select class="sel" id="fs" aria-label="Filter by stage">'+opts(STAGES,S.stage,"Any stage")+'</select><select class="sel" id="fm" aria-label="Filter by medium">'+opts(mediums(),S.medium,"Any medium")+'</select><select class="sel" id="fp" aria-label="Filter by person">'+opts(everyone(),S.person,"Anyone")+'</select></div></details>';
   $("ctl").innerHTML=h;
   $("addBtn").onclick=function(){S.adding=!S.adding;renderControls();var n=$("nt");if(n)n.focus()};
-  $("bkBtn").onclick=function(){S.main=S.main==="backup"?"project":"backup";$("app").classList.add("open");render()};
+  $("bkBtn").onclick=function(){S.main=S.main==="backup"?"project":"backup";$("app").classList.add("open");render();autoHide()};
   if(S.adding){
     $("nr").onchange=function(){var np=$("np");np.classList.toggle("hide",this.value==="solo");np.placeholder=this.value==="help"?"Whose project is it?":"Collaborators, separated by commas"};
     $("nsave").onclick=function(){
       var t=$("nt").value.trim();if(!t){$("nt").focus();return}
       var r=$("nr").value;
       var p={id:uid(),title:t,role:r,people:r==="solo"?[]:splitNames($("np").value),next:"",tasks:[],shelf:"active",created:Date.now(),due:"",parts:[{id:uid(),medium:$("nm").value.trim(),stage:"Idea",owner:"",milestones:[]}],log:[],updated:Date.now()};
-      S.projects.push(p);S.sel=p.id;if(S.shelf!=="all")S.shelf="active";S.main="project";S.adding=false;S.confirm=false;save();render(true)};
+      S.projects.push(p);S.sel=p.id;if(S.shelf!=="all")S.shelf="active";S.main="project";S.adding=false;S.confirm=false;save();render(true);autoHide()};
   }
   $("q").oninput=function(){S.q=this.value;renderResults(false)};
   $("fd").ontoggle=function(){S.filtersOpen=this.open};
-  [].forEach.call(document.querySelectorAll("[data-main]"),function(b){b.onclick=function(){S.main=S.main===b.dataset.main?"project":b.dataset.main;$("app").classList.add("open");render()}});
+  [].forEach.call(document.querySelectorAll("[data-main]"),function(b){b.onclick=function(){S.main=S.main===b.dataset.main?"project":b.dataset.main;$("app").classList.add("open");render();autoHide()}});
   [].forEach.call(document.querySelectorAll("[data-shelf]"),function(b){b.onclick=function(){S.shelf=b.dataset.shelf;renderControls(true)}});
   [].forEach.call(document.querySelectorAll("[data-role]"),function(b){b.onclick=function(){S.role=b.dataset.role;renderControls(true)}});
   $("fs").onchange=function(){S.stage=this.value;renderResults(true)};
@@ -337,7 +353,7 @@ function renderMain(d){
   }
   d.innerHTML=h;
   $("back").onclick=function(){$("app").classList.remove("open")};
-  [].forEach.call(d.querySelectorAll("[data-go]"),function(b){b.onclick=function(){var p=S.projects.find(function(x){return x.id===b.dataset.go});S.sel=p.id;if(S.shelf!=="all")S.shelf=p.shelf;S.main="project";save();render(true)}});
+  [].forEach.call(d.querySelectorAll("[data-go]"),function(b){b.onclick=function(){var p=S.projects.find(function(x){return x.id===b.dataset.go});S.sel=p.id;if(S.shelf!=="all")S.shelf=p.shelf;S.main="project";save();render(true);autoHide()}});
   if(S.main==="backup"){
     $("bkt").value=json;$("bkt").onfocus=function(){this.select()};
     $("bk").onclick=async function(){var m=$("bkm"),f=new File([json],"my-studio-backup-"+ymd(Date.now())+".json",{type:"application/json"});
@@ -408,7 +424,7 @@ function renderDetail(){
   if(p.shelf==="active"){if(fin)h+='<button class="btn sm" id="arch">Send to Done</button>';h+='<button class="btn ghost sm" id="dead">Move to the Archive</button>'}
   else h+='<button class="btn ghost sm" id="revive">Move back to active</button>';
   h+='</div>';
-  h+='<button class="btn ghost danger" id="rm">'+(S.confirm?'Tap again to delete this project':'Delete project')+'</button>';
+  h+='<button class="btn ghost danger'+(S.confirm?' sure':'')+'" id="rm">'+(S.confirm?'Tap again to delete this project':'Delete project')+'</button>';
   d.innerHTML=h;
 
   function touch(){p.updated=Date.now();save()}
@@ -483,9 +499,17 @@ function render(open){
   if(open&&cur())$("app").classList.add("open");
 }
 function applyMenu(){$("app").classList.toggle("collapsed",!!S.collapsed);var t=$("menuTab");t.textContent=S.collapsed?"›":"‹";t.setAttribute("aria-label",S.collapsed?"Show menu":"Hide menu");t.setAttribute("aria-expanded",String(!S.collapsed))}
+var DQ="(max-width:900px),(orientation:portrait)";
+function drawer(){return !!(window.matchMedia&&matchMedia(DQ).matches)}
+function setMenu(c,keep){S.collapsed=c;if(!keep){try{localStorage.setItem("my-studio-ui",c?"1":"")}catch(e){}}applyMenu()}
+function autoHide(){if(drawer())setMenu(true,true)}
+function modeChange(){if(drawer())setMenu(!!cur(),true);else{try{S.collapsed=localStorage.getItem("my-studio-ui")==="1"}catch(e){}applyMenu()}}
 try{S.collapsed=localStorage.getItem("my-studio-ui")==="1"}catch(e){}
-$("menuTab").onclick=function(){S.collapsed=!S.collapsed;try{localStorage.setItem("my-studio-ui",S.collapsed?"1":"")}catch(e){}applyMenu()};
-$("results").onclick=function(e){var b=e.target.closest("[data-open]");if(!b)return;S.sel=b.dataset.open;S.main="project";S.confirm=false;S.confirmPart=null;save();render(true)};
+if(drawer())S.collapsed=!!cur();
+$("menuTab").onclick=function(){setMenu(!S.collapsed,drawer())};
+$("scrim").onclick=function(){setMenu(true,true)};
+if(window.matchMedia){var mq=matchMedia(DQ);if(mq.addEventListener)mq.addEventListener("change",modeChange)}
+$("results").onclick=function(e){var b=e.target.closest("[data-open]");if(!b)return;S.sel=b.dataset.open;S.main="project";S.confirm=false;S.confirmPart=null;save();render(true);autoHide()};
 var mo=new MutationObserver(function(){applyDir($("ctl"));applyDir($("detail"))});mo.observe($("ctl"),{childList:true});mo.observe($("detail"),{childList:true});
 applyMenu();render();
 if(cur()&&window.matchMedia("(max-width:760px)").matches)$("app").classList.add("open");
